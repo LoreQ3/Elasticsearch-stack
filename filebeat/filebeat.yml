@@ -1,0 +1,37 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/access.log
+  fields:
+    service: nginx
+    log_type: access
+  fields_under_root: true
+  tags: ["nginx-access"]
+
+# Отключаем модули чтобы избежать конфликтов
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+# Настройки обработки
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_docker_metadata: ~
+
+# ТОЛЬКО ОДИН OUTPUT - выбираем либо elasticsearch, либо console
+# Вариант 1: Только Elasticsearch (для production)
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  indices:
+    - index: "filebeat-nginx-%{+yyyy.MM.dd}"
+
+# Вариант 2: Только Console (для отладки) - раскомментируйте если нужно
+# output.console:
+#   enabled: true
+#   pretty: true
+
+# Настройки логирования
+logging.level: info
+logging.to_files: false
